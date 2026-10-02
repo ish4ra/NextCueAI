@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  analysisJsonSchema,
+  analysisSchemaForMode,
   parseAnalysis,
   type Language,
   type Mode,
@@ -17,6 +17,16 @@ export class ApiError extends Error {
   }
 }
 export type Fetch = typeof fetch;
+
+function checkAborted(signal: AbortSignal) {
+  if (!signal.aborted) return;
+  if (signal.reason?.name === 'TimeoutError')
+    throw new ApiError(
+      504,
+      'Analysis took too long. Try a smaller screenshot or increase OLLAMA_TIMEOUT_MS.',
+    );
+  throw new ApiError(408, 'Analysis was cancelled.');
+}
 
 export async function modelStatus(
   config: Config,
@@ -78,8 +88,8 @@ Describe only visible evidence. Distinguish observations from possible explanati
 Recommend reversible checks first. Do not recommend disabling security, executing unknown commands, sharing credentials, erasing data, or making payments. Warn before actions with lasting consequences. You cannot click or act on the user's behalf.
 Write every natural-language field in ${language === 'si' ? 'Sinhala using Sinhala script, not romanized Sinhala. Keep exact visible UI labels and technical identifiers unchanged' : 'English'}.
 ${mode === 'simple' ? 'Use plain language, short sentences, no unnecessary jargon, and 2 to 4 short steps.' : 'Explain useful technical context and reasoning, with at most 8 concrete steps.'}
-summary: what is visibly on screen. problem: a tentative explanation, or say no clear error is visible. nextAction: the most useful first action. steps: actionable instructions. caution: uncertainty or a relevant caution, or an empty string. confidence: your subjective confidence in understanding the screenshot, not a guarantee.
-Return only JSON matching this schema: ${JSON.stringify(analysisJsonSchema)}`;
+summary: what is visibly on screen. problem: a tentative explanation, or say no clear error is visible. nextAction: the most useful first action. steps: actions only, without repeating caution or confidence. caution: uncertainty or a relevant caution, or an empty string. confidence: your subjective confidence in understanding the screenshot, not a guarantee.
+Return only JSON matching this schema: ${JSON.stringify(z.toJSONSchema(analysisSchemaForMode(mode)))}`;
 }
 
 export async function analyzeImage(
@@ -91,7 +101,7 @@ export async function analyzeImage(
   signal: AbortSignal,
 ) {
   const status = await modelStatus(config, upstream, signal);
-  if (signal.aborted) throw new ApiError(408, 'Analysis was cancelled.');
+  checkAborted(signal);
   if (status.state !== 'ready') throw new ApiError(503, status.message);
   let res: Response;
   try {
@@ -104,7 +114,7 @@ export async function analyzeImage(
         model: config.model,
         stream: false,
         think: false,
-        format: analysisJsonSchema,
+        format: z.toJSONSchema(analysisSchemaForMode(mode)),
         options: { temperature: 0, num_predict: mode === 'simple' ? 1800 : 3500, num_ctx: 8192 },
         messages: [
           { role: 'system', content: analysisPrompt(language, mode) },
@@ -117,11 +127,7 @@ export async function analyzeImage(
       }),
     });
   } catch {
-    if (signal.aborted)
-      throw new ApiError(
-        504,
-        'Analysis took too long or was cancelled. Try a smaller screenshot or increase OLLAMA_TIMEOUT_MS.',
-      );
+    checkAborted(signal);
     throw new ApiError(503, 'Lost the connection to Ollama. Check that it is running, then retry.');
   }
   if (!res.ok)
@@ -135,8 +141,9 @@ export async function analyzeImage(
     const data = z
       .object({ message: z.object({ content: z.string().max(60000) }) })
       .parse(await res.json());
-    return parseAnalysis(data.message.content);
+    return parseAnalysis(data.message.content, mode);
   } catch {
+    checkAborted(signal);
     throw new ApiError(
       502,
       'The model did not return a usable response. Retry with a clearer screenshot or another vision model.',

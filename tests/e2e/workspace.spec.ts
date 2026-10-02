@@ -141,5 +141,61 @@ test('copies a complete response and provides a manual fallback', async ({ page,
   });
   await page.getByRole('button', { name: 'Copied', exact: true }).click();
   await expect(page.getByText(/Clipboard access is unavailable/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy response' })).toBeVisible();
   expect(await page.evaluate(() => window.getSelection()?.toString())).toContain(analysis.summary);
+});
+
+for (const width of [320, 768, 1440]) {
+  test(`long Sinhala results and screenshot controls fit at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const longText =
+      'තිරයේ පෙනෙන දේ සැලකිල්ලට ගන්න. '.repeat(35) + 'technical_identifier_'.repeat(30);
+    await page.route('**/api/analyze', (route) =>
+      route.fulfill({
+        json: {
+          ...analysis,
+          summary: longText,
+          nextAction: longText,
+          steps: [longText],
+          caution: longText,
+        },
+      }),
+    );
+    await page.goto('/');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: /Skip/ })).toBeFocused();
+    await page
+      .getByLabel('Choose screenshot')
+      .setInputFiles({ ...(await image()), name: 'long-screenshot-filename-'.repeat(8) + '.png' });
+    const remove = page.getByRole('button', { name: 'Remove screenshot' });
+    const box = await remove.boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    await remove.click({ trial: true });
+    await page.getByLabel('Response language').selectOption('si');
+    await page.getByRole('button', { name: 'Analyze screenshot' }).click();
+    await expect(page.locator('.result-content')).toHaveAttribute('lang', 'si');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.reload();
+    await expect(page.getByText('Drop your screenshot here')).toBeVisible();
+  });
+}
+
+test('setup guides a non-vision model back to a local vision model', async ({ page }) => {
+  await page.route('**/api/status', (route) =>
+    route.fulfill({
+      json: {
+        state: 'unsupported',
+        model: 'text-only-model',
+        message: 'This model cannot read images.',
+      },
+    }),
+  );
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect local AI to get started' }).click();
+  await expect(page.locator('#setup-panel')).toBeFocused();
+  await expect(page.getByText('ollama pull gemma4:e2b', { exact: true })).toBeVisible();
+  await expect(page.getByText('OLLAMA_MODEL=gemma4:e2b', { exact: true })).toBeVisible();
 });

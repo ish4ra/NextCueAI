@@ -14,6 +14,7 @@ export function ResultPanel({ result, busy }: Props) {
       setCopied(true);
       setCopyError(false);
     } catch {
+      setCopied(false);
       setCopyError(true);
       const range = document.createRange();
       if (output.current) {

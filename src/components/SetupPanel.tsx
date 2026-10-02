@@ -9,13 +9,15 @@ export function SetupPanel({
   checking: boolean;
   onCheck: () => void;
 }) {
+  const needsLocalModel = status?.state === 'unsupported' || status?.state === 'remote';
+  const model = needsLocalModel ? 'gemma4:e2b' : status?.model || 'gemma4:e2b';
   return (
-    <section className="setup-panel" id="setup-panel" aria-labelledby="setup-title">
+    <section className="setup-panel" id="setup-panel" aria-labelledby="setup-title" tabIndex={-1}>
       <div className="setup-intro">
         <Terminal size={21} aria-hidden="true" />
         <div>
           <h2 id="setup-title">A little setup. Then it stays local.</h2>
-          <p>{status?.message ?? 'Checking your local Ollama connection…'}</p>
+          <p role="status">{status?.message ?? 'Checking your local Ollama connection…'}</p>
         </div>
         <button className="button secondary" onClick={onCheck} disabled={checking}>
           <RefreshCw size={15} className={checking ? 'spin' : ''} aria-hidden="true" />
@@ -33,7 +35,12 @@ export function SetupPanel({
         <li>
           <strong>Download the vision model</strong>
           <p>Run this once in your terminal.</p>
-          <code>ollama pull {status?.model || 'gemma4:e2b'}</code>
+          <code>ollama pull {model}</code>
+          {needsLocalModel && (
+            <p>
+              Then set <code>OLLAMA_MODEL=gemma4:e2b</code> in .env and restart NextCueAI.
+            </p>
+          )}
         </li>
         <li>
           <strong>Keep Ollama running</strong>

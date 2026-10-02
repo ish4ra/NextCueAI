@@ -15,11 +15,15 @@ export const analysisSchema = z.object({
   confidence: z.enum(['high', 'medium', 'low']),
 });
 export type Analysis = z.infer<typeof analysisSchema>;
-export const analysisJsonSchema = z.toJSONSchema(analysisSchema);
+export function analysisSchemaForMode(mode: Mode) {
+  return mode === 'simple'
+    ? analysisSchema.extend({ steps: z.array(text).min(1).max(4) })
+    : analysisSchema;
+}
 
-export function parseAnalysis(raw: string): Analysis {
+export function parseAnalysis(raw: string, mode: Mode = 'detailed'): Analysis {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i, '$1');
-  return analysisSchema.parse(JSON.parse(cleaned));
+  return analysisSchemaForMode(mode).parse(JSON.parse(cleaned));
 }
 
 export function validateFile(file: { type: string; size: number }): string | null {

@@ -380,7 +380,13 @@ export default function App() {
                   </button>
                 )}
                 {!ready && !checking && (
-                  <button className="setup-link" onClick={() => setSetupOpen(true)}>
+                  <button
+                    className="setup-link"
+                    onClick={() => {
+                      setSetupOpen(true);
+                      requestAnimationFrame(() => document.getElementById('setup-panel')?.focus());
+                    }}
+                  >
                     Connect local AI to get started <ArrowRight size={13} aria-hidden="true" />
                   </button>
                 )}
