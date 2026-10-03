@@ -53,5 +53,7 @@
   "overrides": {
     "playwright-core": "1.56.1"
   },
-  "main": "electron/main.cjs"
+  "main": "electron/main.cjs",
+  "author": "Ishara Lakshan",
+  "homepage": "https://github.com/ish4ra/NextCueAI"
 }
