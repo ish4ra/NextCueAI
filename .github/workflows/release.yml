@@ -1,0 +1,78 @@
+name: Release v1.0.0
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release
+        run: npm run check
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser tests
+        run: npm run test:e2e
+
+      - name: Publish v1.0.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            echo "v1.0.0 already exists; nothing to publish."
+            exit 0
+          fi
+
+          cat > "$RUNNER_TEMP/release-notes.md" <<'EOF'
+          ## NextCueAI v1.0.0
+
+          First public release of NextCueAI, a local-first AI assistant that understands screenshots and guides users toward the next step.
+
+          ### Highlights
+
+          - Screenshot analysis with local Ollama + Gemma
+          - Drag and drop, paste, or choose screenshots
+          - English and Sinhala guidance
+          - Simple and Detailed explanation modes
+          - Local model readiness and setup detection
+          - Structured, validated AI output
+          - Privacy-first local processing
+          - Responsive desktop, tablet, and mobile interface
+          - Accessibility-focused keyboard and screen-reader support
+          - PNG, JPEG, and WebP support
+          - Image normalization, metadata removal, and size validation
+          - Timeout, retry, cancel, and copy fallback handling
+
+          ### Requirements
+
+          - Node.js 24+
+          - Ollama
+          - `gemma4:e2b` or another compatible local vision model
+
+          See the README for installation and setup instructions.
+
+          Built for the DEV.to Hacktoberfest Weekend Challenge 2026: Build for a Friend.
+          EOF
+
+          gh release create v1.0.0             --target "$GITHUB_SHA"             --title "NextCueAI v1.0.0"             --notes-file "$RUNNER_TEMP/release-notes.md"             --latest
