@@ -1,6 +1,6 @@
 {
   "name": "nextcueai",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Local screenshot guidance with open-weight vision AI.",
@@ -52,5 +52,6 @@
   },
   "overrides": {
     "playwright-core": "1.56.1"
-  }
+  },
+  "main": "electron/main.cjs"
 }
