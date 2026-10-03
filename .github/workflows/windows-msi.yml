@@ -1,0 +1,95 @@
+name: Windows MSI v1.0.1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/windows-msi.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify project
+        run: npm run check
+
+      - name: Build web app and local bridge
+        run: npm run build
+
+      - name: Install desktop packaging tools
+        run: npm install --no-save --no-package-lock electron@latest electron-builder@latest
+
+      - name: Generate Windows app icon
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          node --input-type=module -e "import sharp from 'sharp'; await sharp('public/icon.svg').resize(512,512).png().toFile('build/icon.png')"
+
+      - name: Build MSI
+        run: npx electron-builder --win msi --x64
+
+      - name: Verify MSI output
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path release -Filter *.msi | Select-Object -First 1
+          if (-not $msi) { throw "MSI package was not produced." }
+          Write-Host "Built $($msi.FullName)"
+
+      - name: Publish v1.0.1 Windows release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $notes = @"
+          ## NextCueAI v1.0.1
+
+          Windows desktop packaging release.
+
+          ### Windows installer
+
+          - Native Windows MSI installer
+          - Bundled desktop runtime, so Node.js is not required after installation
+          - Uses the same local-first NextCueAI interface and local bridge
+          - Ollama remains a separate local dependency
+
+          ### Before first launch
+
+          Install Ollama and pull the default vision model:
+
+          ```
+          ollama pull gemma4:e2b
+          ```
+
+          Then keep Ollama running and open NextCueAI from Windows.
+
+          The source remains available under the MIT license.
+          "@
+
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          $notes | Set-Content -Path $notesPath -Encoding utf8
+
+          gh release view v1.0.1 *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v1.0.1 --target $env:GITHUB_SHA --title "NextCueAI v1.0.1" --notes-file $notesPath --latest
+            if ($LASTEXITCODE -ne 0) { throw "Failed to create GitHub Release." }
+          }
+
+          $msi = Get-ChildItem -Path release -Filter *.msi | Select-Object -First 1
+          gh release upload v1.0.1 $msi.FullName --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Failed to upload MSI to GitHub Release." }
