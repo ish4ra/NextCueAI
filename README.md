@@ -114,4 +114,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and manual verification 
 
 ## License
 
-The application is [MIT licensed](LICENSE). AI model weights have their own terms; review the chosen model's license before redistribution. [Ollama's vision and structured-output documentation](https://docs.ollama.com/capabilities/structured-outputs) describes the underlying API.
+The application is [MIT licensed](LICENSE). The bundled Noto Sans Sinhala font uses the [SIL Open Font License](public/fonts/OFL.txt). AI model weights have their own terms; review the chosen model's license before redistribution. [Ollama's vision and structured-output documentation](https://docs.ollama.com/capabilities/structured-outputs) describes the underlying API.

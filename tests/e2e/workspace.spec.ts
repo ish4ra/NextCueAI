@@ -174,6 +174,16 @@ for (const width of [320, 768, 1440]) {
     await page.getByLabel('Response language').selectOption('si');
     await page.getByRole('button', { name: 'Analyze screenshot' }).click();
     await expect(page.locator('.result-content')).toHaveAttribute('lang', 'si');
+    expect(
+      await page.evaluate(async () => {
+        const fonts = await document.fonts.load('14px "Noto Sans Sinhala"', 'සිංහල');
+        return fonts.length > 0 && fonts.every((font) => font.status === 'loaded');
+      }),
+    ).toBe(true);
+    await expect(page.locator('.action-steps li > span').first()).toHaveCSS(
+      'white-space',
+      'nowrap',
+    );
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

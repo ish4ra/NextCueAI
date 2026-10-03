@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Noto Sans Sinhala';
+  src: url('/fonts/NotoSansSinhala.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   font-family:
     Inter,
@@ -6,6 +14,7 @@
     BlinkMacSystemFont,
     'Segoe UI',
     'Nirmala UI',
+    'Noto Sans Sinhala',
     sans-serif;
   color: #e8ece5;
   background: #101614;
@@ -796,7 +805,7 @@ code {
   white-space: pre-line;
 }
 .result-content[lang='si'] {
-  font-family: 'Nirmala UI', 'Iskoola Pota', sans-serif;
+  font-family: 'Noto Sans Sinhala', 'Nirmala UI', 'Iskoola Pota', sans-serif;
   line-height: 1.95;
 }
 .result-content h3 {
@@ -851,6 +860,8 @@ code {
   border-bottom: 1px solid #2e3b30;
 }
 .action-steps li > span {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 11px;
   color: var(--accent);
   padding-top: 4px;

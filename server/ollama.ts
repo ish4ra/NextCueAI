@@ -120,7 +120,10 @@ export async function analyzeImage(
           { role: 'system', content: analysisPrompt(language, mode) },
           {
             role: 'user',
-            content: 'Explain this screenshot and help me choose the next action.',
+            content:
+              language === 'si'
+                ? 'මෙම තිර රූපය පැහැදිලි කර ඊළඟට කළ යුතු දේ සිංහලෙන් කියන්න. පිළිතුරේ සියලු විස්තර සිංහල අකුරින් ලියන්න. තිරයේ පෙනෙන UI labels සහ technical identifiers පමණක් එලෙසම තබන්න. Keep the JSON keys in English, but write the values in Sinhala.'
+                : 'Explain this screenshot and help me choose the next action.',
             images: [image],
           },
         ],
@@ -141,8 +144,20 @@ export async function analyzeImage(
     const data = z
       .object({ message: z.object({ content: z.string().max(60000) }) })
       .parse(await res.json());
-    return parseAnalysis(data.message.content, mode);
-  } catch {
+    const analysis = parseAnalysis(data.message.content, mode);
+    if (
+      language === 'si' &&
+      [analysis.summary, analysis.problem, analysis.nextAction].some(
+        (value) => !/[\u0D80-\u0DFF]/u.test(value),
+      )
+    )
+      throw new ApiError(
+        502,
+        'The model did not respond in Sinhala. Retry, or choose another local vision model.',
+      );
+    return analysis;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
     checkAborted(signal);
     throw new ApiError(
       502,

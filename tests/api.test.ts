@@ -27,7 +27,7 @@ const body = async () => ({
       .toBuffer()
   ).toString('base64'),
   mime: 'image/png',
-  language: 'si',
+  language: 'en',
   mode: 'simple',
 });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
@@ -91,15 +91,22 @@ describe('local API', () => {
     expect(JSON.stringify(res.body)).not.toContain('private stack');
   });
   it('sends verified image bytes, language, and a JSON schema to Ollama', async () => {
+    const sinhalaResult = {
+      ...result,
+      summary: 'තිරයේ සැකසුම් පෙනේ.',
+      problem: 'පැහැදිලි දෝෂයක් නොපෙනේ.',
+      nextAction: 'තෝරා ඇති සැකසුම බලන්න.',
+      steps: ['සැකසුම බලන්න.'],
+    };
     const upstream = vi
       .fn()
       .mockResolvedValueOnce(response(show))
-      .mockResolvedValueOnce(response({ message: { content: JSON.stringify(result) } }));
+      .mockResolvedValueOnce(response({ message: { content: JSON.stringify(sinhalaResult) } }));
     const res = await request(createApp(config, upstream))
       .post('/api/analyze')
-      .send(await body());
+      .send({ ...(await body()), language: 'si' });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(result);
+    expect(res.body).toEqual(sinhalaResult);
     const payload = JSON.parse(upstream.mock.calls[1][1].body);
     expect(payload.model).toBe(config.model);
     expect(payload.stream).toBe(false);
@@ -199,6 +206,17 @@ describe('local API', () => {
       expect(res.status).toBe(animated ? 400 : 200);
       if (animated) expect(upstream).not.toHaveBeenCalled();
     }
+  });
+  it('rejects English output when Sinhala was requested', async () => {
+    const upstream = vi
+      .fn()
+      .mockResolvedValueOnce(response(show))
+      .mockResolvedValueOnce(response({ message: { content: JSON.stringify(result) } }));
+    const res = await request(createApp(config, upstream))
+      .post('/api/analyze')
+      .send({ ...(await body()), language: 'si' });
+    expect(res.status).toBe(502);
+    expect(res.body.error).toContain('Sinhala');
   });
   it('rejects malformed image bytes before inference', async () => {
     const upstream = vi.fn();
