@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - .github/workflows/windows-msi.yml
+      - electron/**
+      - electron-builder.yml
+      - package.json
+      - package-lock.json
+      - README.md
 
 permissions:
   contents: write
