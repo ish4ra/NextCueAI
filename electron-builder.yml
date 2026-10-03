@@ -1,0 +1,17 @@
+appId: com.isharalakshan.nextcueai
+productName: NextCueAI
+asar: true
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-server/**/*
+  - electron/**/*
+  - package.json
+win:
+  target:
+    - target: msi
+      arch:
+        - x64
+  icon: build/icon.ico
+artifactName: NextCueAI-${version}-Windows-${arch}.${ext}
