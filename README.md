@@ -19,6 +19,18 @@ Built for the DEV.to Hacktoberfest Weekend Challenge 2026, **Build for a Friend*
 
 There is no chat history, account, database, analytics, or hosted inference fallback. Screenshots are analyzed only when you press **Analyze screenshot**. NextCueAI gives guidance; it does not control your computer.
 
+## Windows installer
+
+Windows users can install the desktop build from the latest GitHub Release using the `.msi` package. The desktop app bundles its own application runtime, so Node.js is not required for the installed build.
+
+Ollama is still required separately because NextCueAI keeps inference local. Install Ollama, pull the default vision model once, and keep Ollama running:
+
+```sh
+ollama pull gemma4:e2b
+```
+
+Then launch **NextCueAI** from the Start menu or desktop shortcut.
+
 ## Run locally
 
 Install **Node.js 24+** (Node 24 LTS recommended) and the [latest Ollama](https://ollama.com/download). Keep the Ollama desktop app running. On Linux, start it with `ollama serve`.
